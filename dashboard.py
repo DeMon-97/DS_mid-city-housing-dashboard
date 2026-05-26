@@ -169,7 +169,7 @@ _SDEFS = {
     "Custom": BASE + ["Brick", "Nbhd2", "Nbhd3"],
     "Q1":     BASE + ["Brick", "Nbhd2", "Nbhd3"],
     "Q2":     BASE + ["Brick", "Nbhd2", "Nbhd3"],
-    "Q3":     BASE + ["Brick", "Nbhd2", "Nbhd3", "Brick_Nbhd3"],
+    "Q3":     BASE + ["Nbhd2", "Brick_Nbhd3"],
     "Q4":     BASE + ["Brick", "Nbhd2", "Nbhd3"],
 }
 _SLABELS = {
