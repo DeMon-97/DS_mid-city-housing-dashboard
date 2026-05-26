@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+~$*
+housing_analysis.png
+Mid_City_Housing_Analysis.docx
+Mid_City_Housing_Presentation.pptx
