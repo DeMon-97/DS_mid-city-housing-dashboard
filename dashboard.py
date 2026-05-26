@@ -162,7 +162,7 @@ sig_level = st.sidebar.slider("Significance level (α)", 0.01, 1.00, 0.05, 0.01)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Variable Selection")
-st.sidebar.caption("Select a tab — variables auto-reset to its defaults. Customise using the buttons below.")
+st.sidebar.caption("Choose the tab you are editing, then toggle variables below. Switching tabs resets to defaults.")
 
 # Defaults per section
 _SDEFS = {
@@ -191,8 +191,9 @@ def _on_section_change():
     _s = st.session_state.active_section
     st.session_state[f"svars_{_s}"] = list(_SDEFS[_s])
 
-section = st.sidebar.radio(
-    "Tab:", list(_SDEFS.keys()),
+section = st.sidebar.selectbox(
+    "Editing variables for:",
+    list(_SDEFS.keys()),
     format_func=lambda s: _SLABELS[s],
     key="active_section", on_change=_on_section_change,
 )
@@ -486,8 +487,6 @@ with tab_q3:
         brick_coef3 = mq3.params.get("Brick", 0);  nbhd3_coef3 = mq3.params.get("Nbhd3", 0)
         int_coef    = mq3.params["Brick_Nbhd3"];    int_pval    = mq3.pvalues["Brick_Nbhd3"]
         int_sig     = int_pval < sig_level
-        total_nb3_brick = brick_coef3 + nbhd3_coef3 + int_coef
-
         interaction  = df.groupby(["Nbhd", "Brick"])["Price"].mean().reset_index()
         interaction["Group"]     = interaction["Brick"].map({1: "Brick", 0: "No Brick"})
         interaction["NbhdLabel"] = interaction["Nbhd"].map({1: "Nbhd 1", 2: "Nbhd 2", 3: "Nbhd 3"})
@@ -536,10 +535,6 @@ with tab_q3:
             it2.metric("p-value",          f"{int_pval:.3f}")
             it3.metric("Significant?",     "Yes ✅" if int_sig else "No ❌")
 
-            if int_sig:
-                st.markdown("##### Total premium — brick house in Nbhd 3")
-                st.latex(f"\\${brick_coef3:,.0f} + \\${nbhd3_coef3:,.0f} + \\${int_coef:,.0f} = \\${total_nb3_brick:,.0f}")
-
         st.markdown("##### Coefficient Table")
         st.dataframe(fit_table(mq3), use_container_width=True)
         st.caption(f"Green = significant at α = {sig_level} | Red = not significant | — = not tested for constant")
@@ -553,7 +548,7 @@ with tab_q3:
             st.plotly_chart(avf_plot(mq3), use_container_width=True, key="q3_avf")
 
         if int_sig:
-            st.success(f"**Q3 Answer ✅** Interaction significant (p = {int_pval:.3f}). Extra brick premium in Nbhd 3 = **${int_coef:,.0f}**. Total brick-in-Nbhd-3 premium = **${total_nb3_brick:,.0f}**.")
+            st.success(f"**Q3 Answer ✅** Interaction significant (p = {int_pval:.3f}). Extra brick premium in Nbhd 3 = **${int_coef:,.0f}**.")
         else:
             st.warning(f"**Q3 Answer ❌** Interaction NOT significant (p = {int_pval:.3f}). Brick and Nbhd 3 effects are simply additive — no extra synergy premium.")
 
