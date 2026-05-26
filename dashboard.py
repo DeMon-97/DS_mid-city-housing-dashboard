@@ -484,8 +484,7 @@ with tab_q3:
     if mq3 is None or "Brick_Nbhd3" not in q3_sel:
         st.warning("Add **Brick × Nbhd 3 Interaction** to Q3 variables in the sidebar to answer this question.")
     else:
-        brick_coef3 = mq3.params.get("Brick", 0);  nbhd3_coef3 = mq3.params.get("Nbhd3", 0)
-        int_coef    = mq3.params["Brick_Nbhd3"];    int_pval    = mq3.pvalues["Brick_Nbhd3"]
+        int_coef = mq3.params["Brick_Nbhd3"];  int_pval = mq3.pvalues["Brick_Nbhd3"]
         int_sig     = int_pval < sig_level
         interaction  = df.groupby(["Nbhd", "Brick"])["Price"].mean().reset_index()
         interaction["Group"]     = interaction["Brick"].map({1: "Brick", 0: "No Brick"})
@@ -523,11 +522,6 @@ with tab_q3:
 
             st.markdown("##### Fitted Equation")
             st.latex(regression_equation(mq3, q3_sel))
-
-            st.markdown("##### Main Effects")
-            me1, me2 = st.columns(2)
-            me1.metric("Brick (main)",   f"${brick_coef3:,.0f}")
-            me2.metric("Nbhd 3 (main)",  f"${nbhd3_coef3:,.0f}")
 
             st.markdown("##### Interaction Term")
             it1, it2, it3 = st.columns(3)
