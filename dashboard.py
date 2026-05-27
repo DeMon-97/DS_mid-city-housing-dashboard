@@ -752,9 +752,9 @@ with tab_pred:
     with res_col:
         st.markdown("##### Estimated Price")
         st.metric("Predicted Price", f"${predicted:,.0f}")
-        st.markdown(
-            f"**{int((1 - sig_level) * 100)}% Prediction Interval**  \n"
-            f"${ci_lo:,.0f} — ${ci_hi:,.0f}"
+        st.metric(
+            f"{int((1 - sig_level) * 100)}% Prediction Interval",
+            f"${ci_lo:,.0f} — ${ci_hi:,.0f}",
         )
 
         st.markdown(f"Model Adj R² = **{pred_model.rsquared_adj:.4f}**")
