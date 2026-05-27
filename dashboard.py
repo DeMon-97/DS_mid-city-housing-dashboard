@@ -331,9 +331,9 @@ with tab_q1:
         mean_no_brick = df[df["Brick"] == 0]["Price"].mean()
         raw_diff      = mean_brick - mean_no_brick
 
-        col_l, col_r = st.columns([1, 1], gap="medium")
-
-        with col_l:
+        # ── Descriptive charts ───────────────────────────────────────────────
+        desc_l, desc_r = st.columns([1, 1], gap="medium")
+        with desc_l:
             st.markdown("##### Price: Brick vs No Brick")
             fig = go.Figure()
             for val, lbl, c in [(1, "Brick", "#2ca02c"), (0, "No Brick", "#DD8452")]:
@@ -344,22 +344,26 @@ with tab_q1:
                               legend=LG, **CS, height=280,
                               margin=dict(t=10, b=35, l=70, r=10), shapes=BD)
             st.plotly_chart(fig, use_container_width=True, key="q1_brick_box")
-
+        with desc_r:
+            st.markdown("##### Unadjusted Summary Statistics")
             bstats = df.groupby("Brick")["Price"].agg(Count="count", Mean="mean", Median="median", StdDev="std")\
                        .rename(index={0: "No Brick", 1: "Brick"})
             st.dataframe(bstats.style.format(
                 {"Count": "{:.0f}", "Mean": "${:,.0f}", "Median": "${:,.0f}", "StdDev": "${:,.0f}"}),
                 use_container_width=True)
 
-        with col_r:
+        # ── Fitted equation (full width) ─────────────────────────────────────
+        st.markdown("##### Fitted Equation")
+        st.latex(regression_equation(mq1, q1_sel))
+
+        # ── Model fit + Brick coefficient ────────────────────────────────────
+        fit_col, coef_col = st.columns([1, 1], gap="medium")
+        with fit_col:
             st.markdown("##### Model Fit")
             mc1, mc2 = st.columns(2)
             mc1.metric("R²",     f"{mq1.rsquared:.4f}")
             mc2.metric("Adj R²", f"{mq1.rsquared_adj:.4f}")
-
-            st.markdown("##### Fitted Equation")
-            st.latex(regression_equation(mq1, q1_sel))
-
+        with coef_col:
             st.markdown("##### Brick Coefficient")
             bc1, bc2, bc3 = st.columns(3)
             bc1.metric("Coefficient",  f"${brick_coef:,.0f}")
@@ -408,9 +412,9 @@ with tab_q2:
         nbhd3_pct  = abs(nbhd3_coef) / avg_price * 100
         mean_by_nbhd = df.groupby("Nbhd")["Price"].mean()
 
-        col_l, col_r = st.columns([1, 1], gap="medium")
-
-        with col_l:
+        # ── Descriptive charts ───────────────────────────────────────────────
+        desc_l, desc_r = st.columns([1, 1], gap="medium")
+        with desc_l:
             st.markdown("##### Price by Neighborhood")
             fig = go.Figure()
             for nbhd, lbl, c in [(1, "Nbhd 1 (Older)", "#4C72B0"),
@@ -423,22 +427,26 @@ with tab_q2:
                               legend=LG, **CS, height=280,
                               margin=dict(t=10, b=35, l=70, r=10), shapes=BD)
             st.plotly_chart(fig, use_container_width=True, key="q2_nbhd_box")
-
+        with desc_r:
+            st.markdown("##### Unadjusted Summary Statistics")
             nstats = df.groupby("Nbhd")["Price"].agg(Count="count", Mean="mean", Median="median", StdDev="std")\
                         .rename(index={1: "Nbhd 1", 2: "Nbhd 2", 3: "Nbhd 3"})
             st.dataframe(nstats.style.format(
                 {"Count": "{:.0f}", "Mean": "${:,.0f}", "Median": "${:,.0f}", "StdDev": "${:,.0f}"}),
                 use_container_width=True)
 
-        with col_r:
+        # ── Fitted equation (full width) ─────────────────────────────────────
+        st.markdown("##### Fitted Equation")
+        st.latex(regression_equation(mq2, q2_sel))
+
+        # ── Model fit + Neighborhood coefficients ────────────────────────────
+        fit_col, coef_col = st.columns([1, 1], gap="medium")
+        with fit_col:
             st.markdown("##### Model Fit")
             mc1, mc2 = st.columns(2)
             mc1.metric("R²",     f"{mq2.rsquared:.4f}")
             mc2.metric("Adj R²", f"{mq2.rsquared_adj:.4f}")
-
-            st.markdown("##### Fitted Equation")
-            st.latex(regression_equation(mq2, q2_sel))
-
+        with coef_col:
             st.markdown("##### Neighborhood Coefficients (vs Nbhd 1 baseline)")
             nr1, nr2 = st.columns(2)
             if "Nbhd2" in q2_sel:
@@ -492,9 +500,9 @@ with tab_q3:
         pivot.columns = ["No Brick", "Brick"]
         pivot["Brick Premium ($)"] = pivot["Brick"] - pivot["No Brick"]
 
-        col_l, col_r = st.columns([1, 1], gap="medium")
-
-        with col_l:
+        # ── Descriptive charts ───────────────────────────────────────────────
+        desc_l, desc_r = st.columns([1, 1], gap="medium")
+        with desc_l:
             st.markdown("##### Interaction: Mean Price by Brick × Neighborhood")
             fig = go.Figure()
             for bt, c in [("Brick", "#2ca02c"), ("No Brick", "#DD8452")]:
@@ -509,17 +517,22 @@ with tab_q3:
                               **CS, height=280, margin=dict(t=10, b=35, l=70, r=10), shapes=BD)
             st.plotly_chart(fig, use_container_width=True, key="q3_interaction")
             st.caption("Diverging lines toward Nbhd 3 signal an interaction effect.")
+        with desc_r:
+            st.markdown("##### Unadjusted Mean Prices by Brick × Neighborhood")
             st.dataframe(pivot.style.format("${:,.0f}"), use_container_width=True)
 
-        with col_r:
+        # ── Fitted equation (full width) ─────────────────────────────────────
+        st.markdown("##### Fitted Equation")
+        st.latex(regression_equation(mq3, q3_sel))
+
+        # ── Model fit + Interaction term ─────────────────────────────────────
+        fit_col, int_col = st.columns([1, 1], gap="medium")
+        with fit_col:
             st.markdown("##### Model Fit")
             mc1, mc2 = st.columns(2)
             mc1.metric("R²",     f"{mq3.rsquared:.4f}")
             mc2.metric("Adj R²", f"{mq3.rsquared_adj:.4f}")
-
-            st.markdown("##### Fitted Equation")
-            st.latex(regression_equation(mq3, q3_sel))
-
+        with int_col:
             st.markdown("##### Interaction Term")
             it1, it2, it3 = st.columns(3)
             it1.metric("Interaction coef", f"${int_coef:,.0f}")
