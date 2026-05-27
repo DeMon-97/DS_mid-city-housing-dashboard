@@ -166,18 +166,20 @@ st.sidebar.caption("Choose the tab you are editing, then toggle variables below.
 
 # Defaults per section
 _SDEFS = {
-    "Custom": BASE + ["Brick", "Nbhd2", "Nbhd3"],
-    "Q1":     BASE + ["Brick", "Nbhd2", "Nbhd3"],
-    "Q2":     BASE + ["Brick", "Nbhd2", "Nbhd3"],
-    "Q3":     BASE + ["Nbhd2", "Brick_Nbhd3"],
-    "Q4":     BASE + ["Brick", "Nbhd2", "Nbhd3"],
+    "Custom":    BASE + ["Brick", "Nbhd2", "Nbhd3"],
+    "Q1":        BASE + ["Brick", "Nbhd2", "Nbhd3"],
+    "Q2":        BASE + ["Brick", "Nbhd2", "Nbhd3"],
+    "Q3":        BASE + ["Nbhd2", "Brick_Nbhd3"],
+    "Q4":        BASE + ["Brick", "Nbhd2", "Nbhd3"],
+    "Predictor": BASE + ["Brick", "Nbhd2", "Nbhd3"],
 }
 _SLABELS = {
-    "Custom": "🔧 Custom Explorer",
-    "Q1":     "Q1 — Brick Premium",
-    "Q2":     "Q2 — Nbhd 3 Premium",
-    "Q3":     "Q3 — Brick × Nbhd 3",
-    "Q4":     "Q4 — Collapse Nbhds",
+    "Custom":    "🔧 Custom Explorer",
+    "Q1":        "Q1 — Brick Premium",
+    "Q2":        "Q2 — Nbhd 3 Premium",
+    "Q3":        "Q3 — Brick × Nbhd 3",
+    "Q4":        "Q4 — Collapse Nbhds",
+    "Predictor": "🏷️ Price Predictor",
 }
 
 # Initialise session state
@@ -198,8 +200,7 @@ section = st.sidebar.selectbox(
     key="active_section", on_change=_on_section_change,
 )
 
-# "Newer" is always auto-derived for Q4; exclude from pill options
-_VAR_OPTS = [v for v in ALL_VARS if v != "Newer"]
+_VAR_OPTS = list(ALL_VARS.keys())
 st.sidebar.pills(
     "Variables:",
     options=_VAR_OPTS,
@@ -217,6 +218,7 @@ q1_sel   = _gv("Q1")
 q2_sel   = _gv("Q2")
 q3_sel   = _gv("Q3")
 q4_sel   = _gv("Q4")
+pred_sel = _gv("Predictor")
 
 # Derive Q4 collapsed vars: swap Nbhd2+Nbhd3 → Newer
 q4c_sel = [v for v in q4_sel if v not in ["Nbhd2", "Nbhd3"]]
@@ -719,45 +721,76 @@ with tab_q4:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_pred:
     st.subheader("🏷️ Price Predictor")
-    st.markdown("Adjust the sliders to describe a house. The model uses OLS regression (SqFt, Offers, Bedrooms, Bathrooms, Brick, Neighborhood) to estimate its price.")
+    st.markdown("Adjust the sliders to describe a house. Use the **Variable Selection** panel in the sidebar to choose which variables the model uses.")
 
-    pred_model = sm.OLS(df["Price"], sm.add_constant(df[Q12_VARS])).fit()
+    if not pred_sel:
+        st.warning("Select at least one variable in the sidebar.")
+    else:
+        pred_model = sm.OLS(df["Price"], sm.add_constant(df[pred_sel])).fit()
 
-    sl_col, res_col = st.columns([1, 1], gap="large")
+        sl_col, res_col = st.columns([1, 1], gap="large")
+        input_vals = {}
 
-    with sl_col:
-        sqft      = st.slider("Square Footage",    int(df["SqFt"].min()),     int(df["SqFt"].max()),     int(df["SqFt"].median()),     step=50)
-        offers    = st.slider("Number of Offers",  int(df["Offers"].min()),   int(df["Offers"].max()),   int(df["Offers"].median()),   step=1)
-        bedrooms  = st.slider("Bedrooms",          int(df["Bedrooms"].min()), int(df["Bedrooms"].max()), int(df["Bedrooms"].median()), step=1)
-        bathrooms = st.slider("Bathrooms",         int(df["Bathrooms"].min()),int(df["Bathrooms"].max()),int(df["Bathrooms"].median()),step=1)
-        brick_in  = st.radio("Brick Construction", ["No", "Yes"], horizontal=True)
-        nbhd_in   = st.radio("Neighborhood",       [1, 2, 3],
-                             format_func=lambda n: f"Neighborhood {n}", horizontal=True)
+        _STEPS = {"SqFt": 50, "Offers": 1, "Bedrooms": 1, "Bathrooms": 1}
 
-    brick_val = 1 if brick_in == "Yes" else 0
-    nbhd2_val = 1 if nbhd_in == 2 else 0
-    nbhd3_val = 1 if nbhd_in == 3 else 0
+        with sl_col:
+            # Continuous sliders for any BASE vars selected
+            for v in [v for v in pred_sel if v in BASE]:
+                input_vals[v] = st.slider(
+                    ALL_VARS[v],
+                    int(df[v].min()), int(df[v].max()), int(df[v].median()),
+                    step=_STEPS.get(v, 1),
+                )
 
-    X_new = pd.DataFrame(
-        [[sqft, offers, bedrooms, bathrooms, brick_val, nbhd2_val, nbhd3_val]],
-        columns=Q12_VARS,
-    )
-    X_new_c = sm.add_constant(X_new, has_constant="add")
+            # Brick radio
+            if "Brick" in pred_sel or "Brick_Nbhd3" in pred_sel:
+                brick_in = st.radio("Brick Construction", ["No", "Yes"], horizontal=True)
+                input_vals["Brick"] = 1 if brick_in == "Yes" else 0
 
-    pred_frame = pred_model.get_prediction(X_new_c).summary_frame(alpha=sig_level)
-    predicted  = pred_frame["mean"].iloc[0]
-    ci_lo      = pred_frame["obs_ci_lower"].iloc[0]
-    ci_hi      = pred_frame["obs_ci_upper"].iloc[0]
+            # Neighborhood inputs
+            has_nbhd2 = "Nbhd2" in pred_sel
+            has_nbhd3 = "Nbhd3" in pred_sel or "Brick_Nbhd3" in pred_sel
+            has_newer = "Newer" in pred_sel
 
-    with res_col:
-        st.markdown("##### Estimated Price")
-        st.metric("Predicted Price", f"${predicted:,.0f}")
-        st.metric(
-            f"{int((1 - sig_level) * 100)}% Prediction Interval",
-            f"${ci_lo:,.0f} — ${ci_hi:,.0f}",
-        )
+            if has_nbhd2 and has_nbhd3:
+                nbhd_in = st.radio("Neighborhood", [1, 2, 3],
+                                   format_func=lambda n: f"Neighborhood {n}", horizontal=True)
+                input_vals["Nbhd2"] = 1 if nbhd_in == 2 else 0
+                input_vals["Nbhd3"] = 1 if nbhd_in == 3 else 0
+            elif has_nbhd2:
+                nbhd2_in = st.radio("In Neighborhood 2?", ["No", "Yes"], horizontal=True)
+                input_vals["Nbhd2"] = 1 if nbhd2_in == "Yes" else 0
+            elif has_nbhd3:
+                nbhd3_in = st.radio("In Neighborhood 3?", ["No", "Yes"], horizontal=True)
+                input_vals["Nbhd3"] = 1 if nbhd3_in == "Yes" else 0
 
-        st.markdown(f"Model Adj R² = **{pred_model.rsquared_adj:.4f}**")
+            if has_newer:
+                newer_in = st.radio("Neighborhood", ["Older (1 or 2)", "Newer (3)"], horizontal=True)
+                input_vals["Newer"] = 1 if newer_in == "Newer (3)" else 0
+
+            # Brick_Nbhd3 is auto-derived
+            if "Brick_Nbhd3" in pred_sel:
+                input_vals["Brick_Nbhd3"] = input_vals.get("Brick", 0) * input_vals.get("Nbhd3", 0)
+
+        X_row   = pd.DataFrame([[input_vals.get(v, 0) for v in pred_sel]], columns=pred_sel)
+        X_new_c = sm.add_constant(X_row, has_constant="add")
+
+        pred_frame = pred_model.get_prediction(X_new_c).summary_frame(alpha=sig_level)
+        predicted  = pred_frame["mean"].iloc[0]
+        ci_lo      = pred_frame["obs_ci_lower"].iloc[0]
+        ci_hi      = pred_frame["obs_ci_upper"].iloc[0]
+
+        with res_col:
+            st.markdown("##### Estimated Price")
+            st.metric("Predicted Price", f"${predicted:,.0f}")
+            st.metric(
+                f"{int((1 - sig_level) * 100)}% Prediction Interval",
+                f"${ci_lo:,.0f} — ${ci_hi:,.0f}",
+            )
+            st.markdown(f"Model Adj R² = **{pred_model.rsquared_adj:.4f}**")
+
+        st.markdown("##### Fitted Equation")
+        st.latex(regression_equation(pred_model, pred_sel))
 
 
 
