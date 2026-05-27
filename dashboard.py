@@ -259,11 +259,10 @@ with tab_custom:
     else:
         cust_model = sm.OLS(df["Price"], sm.add_constant(df[cust_sel])).fit()
 
-        cc1, cc2, cc3, cc4 = st.columns(4)
+        cc1, cc2, cc3 = st.columns(3)
         cc1.metric("R²",           f"{cust_model.rsquared:.4f}")
         cc2.metric("Adj R²",       f"{cust_model.rsquared_adj:.4f}")
-        cc3.metric("F p-value",    f"{cust_model.f_pvalue:.3e}")
-        cc4.metric("Observations", len(df))
+        cc3.metric("Observations", len(df))
 
         st.markdown("##### Fitted Equation")
         st.latex(regression_equation(cust_model, cust_sel))
@@ -354,10 +353,9 @@ with tab_q1:
 
         with col_r:
             st.markdown("##### Model Fit")
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("R²",      f"{mq1.rsquared:.4f}")
-            mc2.metric("Adj R²",  f"{mq1.rsquared_adj:.4f}")
-            mc3.metric("F p-val", f"{mq1.f_pvalue:.3e}")
+            mc1, mc2 = st.columns(2)
+            mc1.metric("R²",     f"{mq1.rsquared:.4f}")
+            mc2.metric("Adj R²", f"{mq1.rsquared_adj:.4f}")
 
             st.markdown("##### Fitted Equation")
             st.latex(regression_equation(mq1, q1_sel))
@@ -434,10 +432,9 @@ with tab_q2:
 
         with col_r:
             st.markdown("##### Model Fit")
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("R²",      f"{mq2.rsquared:.4f}")
-            mc2.metric("Adj R²",  f"{mq2.rsquared_adj:.4f}")
-            mc3.metric("F p-val", f"{mq2.f_pvalue:.3e}")
+            mc1, mc2 = st.columns(2)
+            mc1.metric("R²",     f"{mq2.rsquared:.4f}")
+            mc2.metric("Adj R²", f"{mq2.rsquared_adj:.4f}")
 
             st.markdown("##### Fitted Equation")
             st.latex(regression_equation(mq2, q2_sel))
@@ -516,10 +513,9 @@ with tab_q3:
 
         with col_r:
             st.markdown("##### Model Fit")
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("R²",      f"{mq3.rsquared:.4f}")
-            mc2.metric("Adj R²",  f"{mq3.rsquared_adj:.4f}")
-            mc3.metric("F p-val", f"{mq3.f_pvalue:.3e}")
+            mc1, mc2 = st.columns(2)
+            mc1.metric("R²",     f"{mq3.rsquared:.4f}")
+            mc2.metric("Adj R²", f"{mq3.rsquared_adj:.4f}")
 
             st.markdown("##### Fitted Equation")
             st.latex(regression_equation(mq3, q3_sel))
