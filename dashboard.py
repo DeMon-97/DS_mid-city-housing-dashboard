@@ -147,13 +147,13 @@ def insight_box(text):
 def fit_table(model):
     cdf = pd.DataFrame({
         "Coefficient": model.params, "Std Error": model.bse,
-        "t-stat": model.tvalues, "p-value": model.pvalues,
+        "p-value": model.pvalues,
         "CI Lower": model.conf_int()[0], "CI Upper": model.conf_int()[1],
     })
     cdf.loc["const","p-value"] = float("nan")
     def sp(v): return "" if pd.isna(v) else ("color:#1a7a1a;font-weight:bold" if v<sig_level else "color:#cc0000")
     return cdf.style.map(sp, subset=["p-value"]).format(
-        {"Coefficient":"${:,.0f}","Std Error":"${:,.0f}","t-stat":"{:.3f}",
+        {"Coefficient":"${:,.0f}","Std Error":"${:,.0f}",
          "p-value":"{:.3f}","CI Lower":"${:,.0f}","CI Upper":"${:,.0f}"}, na_rep="—")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
