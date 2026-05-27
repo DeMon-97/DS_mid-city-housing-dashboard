@@ -238,12 +238,13 @@ st.markdown("*Albright & Winston, Business Analytics (7e)*")
 st.markdown("---")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab_custom, tab_q1, tab_q2, tab_q3, tab_q4 = st.tabs([
+tab_custom, tab_q1, tab_q2, tab_q3, tab_q4, tab_pred = st.tabs([
     "🔧 Custom Explorer",
     "Q1 — Brick Premium",
     "Q2 — Nbhd 3 Premium",
     "Q3 — Brick × Nbhd 3",
     "Q4 — Collapse Nbhds",
+    "🏷️ Price Predictor",
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -702,6 +703,87 @@ with tab_q4:
         • <b>Regression (adjusted):</b> Nbhd2 coefficient = ${nbhd2_coef4:,.0f} (p = {nbhd2_pval4:.3f}) — not significant. The raw ${abs(mean_by_nbhd[1]-mean_by_nbhd[2]):,.0f} gap is explained by house characteristics, not the neighborhood.<br>
         • <b>Partial F-test:</b> Dropping Nbhd2 changes Adj R² by only {adj_r2_drop:.4f}. The real distinction is <i>Nbhd 3 vs everyone else</i>.
         """)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Price Predictor
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_pred:
+    st.subheader("🏷️ Price Predictor")
+    st.markdown("Adjust the sliders to describe a house. The model uses OLS regression (SqFt, Offers, Bedrooms, Bathrooms, Brick, Neighborhood) to estimate its price.")
+
+    pred_model = sm.OLS(df["Price"], sm.add_constant(df[Q12_VARS])).fit()
+
+    sl_col, res_col = st.columns([1, 1], gap="large")
+
+    with sl_col:
+        sqft      = st.slider("Square Footage",    int(df["SqFt"].min()),     int(df["SqFt"].max()),     int(df["SqFt"].median()),     step=50)
+        offers    = st.slider("Number of Offers",  int(df["Offers"].min()),   int(df["Offers"].max()),   int(df["Offers"].median()),   step=1)
+        bedrooms  = st.slider("Bedrooms",          int(df["Bedrooms"].min()), int(df["Bedrooms"].max()), int(df["Bedrooms"].median()), step=1)
+        bathrooms = st.slider("Bathrooms",         int(df["Bathrooms"].min()),int(df["Bathrooms"].max()),int(df["Bathrooms"].median()),step=1)
+        brick_in  = st.radio("Brick Construction", ["No", "Yes"], horizontal=True)
+        nbhd_in   = st.radio("Neighborhood",       [1, 2, 3],
+                             format_func=lambda n: f"Neighborhood {n}", horizontal=True)
+
+    brick_val = 1 if brick_in == "Yes" else 0
+    nbhd2_val = 1 if nbhd_in == 2 else 0
+    nbhd3_val = 1 if nbhd_in == 3 else 0
+
+    X_new = pd.DataFrame(
+        [[sqft, offers, bedrooms, bathrooms, brick_val, nbhd2_val, nbhd3_val]],
+        columns=Q12_VARS,
+    )
+    X_new_c = sm.add_constant(X_new, has_constant="add")
+
+    pred_frame = pred_model.get_prediction(X_new_c).summary_frame(alpha=sig_level)
+    predicted  = pred_frame["mean"].iloc[0]
+    ci_lo      = pred_frame["obs_ci_lower"].iloc[0]
+    ci_hi      = pred_frame["obs_ci_upper"].iloc[0]
+    pct        = (df["Price"] < predicted).mean() * 100
+
+    with res_col:
+        st.markdown("##### Estimated Price")
+        st.metric("Predicted Price", f"${predicted:,.0f}")
+        st.metric(f"{int((1 - sig_level) * 100)}% Prediction Interval",
+                  f"${ci_lo:,.0f} — ${ci_hi:,.0f}")
+        st.metric("Percentile in Dataset", f"{pct:.0f}th")
+
+        st.markdown(f"Model Adj R² = **{pred_model.rsquared_adj:.4f}**")
+
+    st.markdown("##### Where Does This House Fall in the Price Distribution?")
+    fig_dist = go.Figure()
+    fig_dist.add_trace(go.Histogram(
+        x=df["Price"], nbinsx=25, name="Actual prices",
+        marker_color="#4C72B0", opacity=0.65,
+        hovertemplate="Price: $%{x:,.0f}<br>Count: %{y}<extra></extra>",
+    ))
+    fig_dist.add_vline(
+        x=predicted, line_color="#DD8452", line_width=2.5,
+        annotation_text=f"  Predicted: ${predicted:,.0f}",
+        annotation_position="top right",
+        annotation_font=dict(color="#DD8452", size=12),
+    )
+    fig_dist.add_vrect(
+        x0=ci_lo, x1=ci_hi, fillcolor="#DD8452", opacity=0.12, line_width=0,
+        annotation_text=f"  {int((1 - sig_level) * 100)}% PI",
+        annotation_position="top left",
+        annotation_font=dict(color="#DD8452", size=10),
+    )
+    fig_dist.update_layout(
+        xaxis_title="Price ($)", yaxis_title="Count",
+        xaxis={**AX, "tickformat": "$,.0f"}, yaxis=AX,
+        legend=LG, **CS, height=320,
+        margin=dict(t=15, b=35, l=60, r=15), shapes=BD,
+    )
+    st.plotly_chart(fig_dist, use_container_width=True, key="pred_dist")
+
+    insight_box(f"""
+    <b>How to read this</b><br>
+    • The orange line is the model's point estimate: <b>${predicted:,.0f}</b>.<br>
+    • The shaded band is the {int((1 - sig_level) * 100)}% <b>prediction interval</b> — the range within which a single new home with these characteristics is expected to sell, with {int((1 - sig_level) * 100)}% confidence.<br>
+    • The prediction interval is wider than a confidence interval because it accounts for both model uncertainty and natural house-to-house variation.<br>
+    • This house is estimated to be in the <b>{pct:.0f}th percentile</b> of the dataset by price.
+    """)
 
 
 st.markdown("---")
