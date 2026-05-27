@@ -748,51 +748,15 @@ with tab_pred:
     predicted  = pred_frame["mean"].iloc[0]
     ci_lo      = pred_frame["obs_ci_lower"].iloc[0]
     ci_hi      = pred_frame["obs_ci_upper"].iloc[0]
-    pct        = (df["Price"] < predicted).mean() * 100
 
     with res_col:
         st.markdown("##### Estimated Price")
         st.metric("Predicted Price", f"${predicted:,.0f}")
         st.metric(f"{int((1 - sig_level) * 100)}% Prediction Interval",
                   f"${ci_lo:,.0f} — ${ci_hi:,.0f}")
-        st.metric("Percentile in Dataset", f"{pct:.0f}th")
 
         st.markdown(f"Model Adj R² = **{pred_model.rsquared_adj:.4f}**")
 
-    st.markdown("##### Where Does This House Fall in the Price Distribution?")
-    fig_dist = go.Figure()
-    fig_dist.add_trace(go.Histogram(
-        x=df["Price"], nbinsx=25, name="Actual prices",
-        marker_color="#4C72B0", opacity=0.65,
-        hovertemplate="Price: $%{x:,.0f}<br>Count: %{y}<extra></extra>",
-    ))
-    fig_dist.add_vline(
-        x=predicted, line_color="#DD8452", line_width=2.5,
-        annotation_text=f"  Predicted: ${predicted:,.0f}",
-        annotation_position="top right",
-        annotation_font=dict(color="#DD8452", size=12),
-    )
-    fig_dist.add_vrect(
-        x0=ci_lo, x1=ci_hi, fillcolor="#DD8452", opacity=0.12, line_width=0,
-        annotation_text=f"  {int((1 - sig_level) * 100)}% PI",
-        annotation_position="top left",
-        annotation_font=dict(color="#DD8452", size=10),
-    )
-    fig_dist.update_layout(
-        xaxis_title="Price ($)", yaxis_title="Count",
-        xaxis={**AX, "tickformat": "$,.0f"}, yaxis=AX,
-        legend=LG, **CS, height=320,
-        margin=dict(t=15, b=35, l=60, r=15), shapes=BD,
-    )
-    st.plotly_chart(fig_dist, use_container_width=True, key="pred_dist")
-
-    insight_box(f"""
-    <b>How to read this</b><br>
-    • The orange line is the model's point estimate: <b>${predicted:,.0f}</b>.<br>
-    • The shaded band is the {int((1 - sig_level) * 100)}% <b>prediction interval</b> — the range within which a single new home with these characteristics is expected to sell, with {int((1 - sig_level) * 100)}% confidence.<br>
-    • The prediction interval is wider than a confidence interval because it accounts for both model uncertainty and natural house-to-house variation.<br>
-    • This house is estimated to be in the <b>{pct:.0f}th percentile</b> of the dataset by price.
-    """)
 
 
 st.markdown("---")
