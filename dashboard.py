@@ -581,11 +581,8 @@ with tab_q4:
 
     q4_ready = mq4f is not None and mq4c is not None and "Nbhd2" in q4_sel
     if q4_ready:
-        f_stat_pf = ((mq4c.ssr - mq4f.ssr) / 1) / (mq4f.ssr / mq4f.df_resid)
-        f_pval_pf = 1 - stats.f.cdf(f_stat_pf, 1, mq4f.df_resid)
-        can_collapse = f_pval_pf > sig_level
         nbhd2_coef4  = mq4f.params["Nbhd2"]; nbhd2_pval4 = mq4f.pvalues["Nbhd2"]
-        adj_r2_drop  = abs(mq4f.rsquared_adj - mq4c.rsquared_adj)
+        can_collapse = nbhd2_pval4 > sig_level
 
     nbhd_ci = {}
     for n in [1, 2, 3]:
@@ -671,12 +668,6 @@ with tab_q4:
             mc2.metric("Collapsed Adj R²",          f"{mq4c.rsquared_adj:.4f}",
                        delta=f"{mq4c.rsquared_adj - mq4f.rsquared_adj:+.4f}")
 
-            st.markdown("##### Partial F-Test (dropping Nbhd2)")
-            pf1, pf2, pf3 = st.columns(3)
-            pf1.metric("F-statistic",  f"{f_stat_pf:.3f}")
-            pf2.metric("p-value",      f"{f_pval_pf:.3f}")
-            pf3.metric("Can Collapse?","Yes ✅" if can_collapse else "No ❌")
-
             st.markdown(f"**Nbhd 2 coefficient:** ${nbhd2_coef4:,.0f} &nbsp; (p = {nbhd2_pval4:.3f})")
 
         with ols_r:
@@ -699,20 +690,17 @@ with tab_q4:
         if can_collapse:
             st.success(
                 f"**Q4 Answer ✅** Nbhd 1 and 2 can be collapsed. "
-                f"ANOVA: F = {f_anova:.3f}, p = {p_anova:.3e}. "
-                f"Nbhd2 coef = ${nbhd2_coef4:,.0f} (p = {nbhd2_pval4:.3f}); "
-                f"Partial F p = {f_pval_pf:.3f}.")
+                f"Nbhd2 coef = ${nbhd2_coef4:,.0f} (p = {nbhd2_pval4:.3f}) — not significant.")
         else:
             st.error(
                 f"**Q4 Answer ❌** Nbhd 1 and 2 cannot be collapsed. "
-                f"Nbhd2 coef p = {nbhd2_pval4:.3f}; Partial F p = {f_pval_pf:.3f}.")
+                f"Nbhd2 coef = ${nbhd2_coef4:,.0f} (p = {nbhd2_pval4:.3f}) — significant.")
 
         insight_box(f"""
         <b>Key Insights</b><br>
         • <b>One-way ANOVA:</b> F = {f_anova:.3f}, p = {p_anova:.3e} — at least one neighborhood has a different mean price. ANOVA tells us <i>that</i> a difference exists, not <i>which</i> group drives it.<br>
         • <b>Means plot (unadjusted):</b> Nbhd 1 = ${nbhd_ci[1][0]:,.0f}, Nbhd 2 = ${nbhd_ci[2][0]:,.0f}, Nbhd 3 = ${nbhd_ci[3][0]:,.0f}. CIs for Nbhd 1 and 2 don't overlap — their raw prices differ. But this is before controlling for house characteristics.<br>
-        • <b>Regression (adjusted):</b> Nbhd2 coefficient = ${nbhd2_coef4:,.0f} (p = {nbhd2_pval4:.3f}) — not significant. The raw ${abs(mean_by_nbhd[1]-mean_by_nbhd[2]):,.0f} gap is explained by house characteristics, not the neighborhood.<br>
-        • <b>Partial F-test:</b> Dropping Nbhd2 changes Adj R² by only {adj_r2_drop:.4f}. The real distinction is <i>Nbhd 3 vs everyone else</i>.
+        • <b>Regression (adjusted):</b> Nbhd2 coefficient = ${nbhd2_coef4:,.0f} (p = {nbhd2_pval4:.3f}) — not significant. The raw ${abs(mean_by_nbhd[1]-mean_by_nbhd[2]):,.0f} gap is explained by house characteristics, not the neighborhood. The real distinction is <i>Nbhd 3 vs everyone else</i>.
         """)
 
 
